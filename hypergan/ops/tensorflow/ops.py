@@ -106,8 +106,130 @@ class TensorflowOps:
         else:
             raise Exception("dtype not defined: "+str(dtype))
 
+    def cosine_conv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
+        with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+            w = self.get_weight([filter_h, filter_w, net.get_shape()[-1], output_dim])
+            conv = tf.nn.conv2d(net, w, strides=[1, 1, 1, 1], padding='SAME')
+            biases = self.get_bias([output_dim], 0.001)
+            conv = tf.nn.bias_add(conv, biases)
+
+            w_square = tf.square(w)
+            #w_sum = tf.reduce_sum(w_square, [0,1,2])
+            w_conv = tf.nn.conv2d(tf.ones_like(net), w_square, strides=[1, 1, 1, 1], padding='SAME')
+            w_norm = tf.sqrt(w_conv + 1e-4)
+
+            net_square = tf.square(net)
+            w_ones = tf.ones_like(w)
+            net_sum = tf.nn.conv2d(net_square, w_ones, strides=[1, 1, 1, 1], padding='SAME')
+            net_norm = tf.sqrt(net_sum + 1e-4)
+
+            return conv / (w_norm * net_norm)
+
+    #def weightnorm_conv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
+    #    with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+    #        w = self.get_weight([filter_h, filter_w, net.get_shape()[-1], output_dim])
+    #        g = self.get_weight(name='g', shape=[1,output_dim])
+    #        conv = tf.nn.conv2d(net, w, strides=[1, 1, 1, 1], padding='SAME')
+    #        b = self.get_bias([output_dim], 0.001)
+
+    #        w_square = tf.square(w)
+    #        #w_sum = tf.reduce_sum(w_square, [0,1,2])
+    #        w_conv = tf.nn.conv2d(tf.ones_like(net), w_square, strides=[1, 1, 1, 1], padding='SAME')
+    #        w_norm = tf.sqrt(w_conv + 1e-4)
+
+    #        return (conv*g+b) / (w_norm)
+
+    #def weightnorm_conv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
+    #    with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+    #        w = self.get_weight([filter_h, filter_w, net.get_shape()[-1], output_dim])
+    #        g = self.get_weight(name='g', shape=[1,output_dim])
+    #        b = self.get_bias([output_dim])
+
+    #        # use weight normalization (Salimans & Kingma, 2016)
+    #        W = tf.reshape(g,[1,1,1,output_dim])*tf.nn.l2_normalize(w,[0,1,2])
+
+    #        # calculate convolutional layer output
+    #        return tf.nn.bias_add(tf.nn.conv2d(net, W, [1, stride_h, stride_w, 1], padding='SAME'), b)
+
+    def weightnorm_conv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
+        with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+            # modified from https://github.com/openai/weightnorm/blob/master/tensorflow/nn.py
+            # data based initialization of parameters
+            g = self.get_weight(name='g', shape=[1,1,1,output_dim])#, initializer=scale_init)
+            b = self.get_bias(shape=[output_dim])#, initializer=-m_init*scale_init)
+            shape = [filter_h, filter_w, int(net.get_shape()[-1]),output_dim]
+            V = self.get_weight(name='v', shape=shape)
+            V_norm = tf.nn.l2_normalize(V, [0,1,2])
+            x_init = tf.nn.conv2d(net, V_norm, [1, stride_h, stride_w, 1], padding="SAME")
+            x_init = tf.nn.bias_add(x_init, b)
+            m_init, v_init = tf.nn.moments(x_init, [0,1,2])
+            scale_init = 1.0/tf.sqrt(v_init + 1e-8)
+            x_init = tf.reshape(scale_init,[1,1,1,output_dim])*(x_init-tf.reshape(m_init,[1,1,1,output_dim]))
+            return g*x_init
+
+    def weightnorm2_conv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
+        with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+            # modified from https://github.com/openai/weightnorm/blob/master/tensorflow/nn.py
+            # data based initialization of parameters
+            g = self.get_weight(name='g', shape=[1,1,1,output_dim])#, initializer=scale_init)
+            shape = [filter_h, filter_w, int(net.get_shape()[-1]),output_dim]
+            V = self.get_weight(name='v', shape=shape)
+            V_norm = tf.nn.l2_normalize(V, [0,1,2])
+            x_init = tf.nn.conv2d(net, V_norm, [1, stride_h, stride_w, 1], padding="SAME")
+            m_init, v_init = tf.nn.moments(x_init, [0,1,2])
+            scale_init = 1.0/tf.sqrt(v_init + 1e-8)
+            x_init = tf.reshape(scale_init,[1,1,1,output_dim])*(x_init-tf.reshape(m_init,[1,1,1,output_dim]))
+            return g*x_init
+
+    def weightnorm3_conv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
+        with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+            # modified from https://github.com/openai/weightnorm/blob/master/tensorflow/nn.py
+            # data based initialization of parameters
+            g = self.get_weight(name='g', shape=[1,1,1,output_dim])#, initializer=scale_init)
+            shape = [filter_h, filter_w, int(net.get_shape()[-1]),output_dim]
+            V = self.get_weight(name='v', shape=shape)
+            V_norm = tf.nn.l2_normalize(V, [0,1,2])*g
+            x_init = tf.nn.conv2d(net, V_norm, [1, stride_h, stride_w, 1], padding="SAME")
+            m_init, v_init = tf.nn.moments(x_init, [0,1,2])
+            scale_init = 1.0/tf.sqrt(v_init + 1e-8)
+            x_init = tf.reshape(scale_init,[1,1,1,output_dim])*(x_init-tf.reshape(m_init,[1,1,1,output_dim]))
+            return x_init
+
+
+
+    def weightnorm_deconv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
+        with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+            # modified from https://github.com/openai/weightnorm/blob/master/tensorflow/nn.py
+            # data based initialization of parameters
+            g = self.get_weight(name='g', shape=[1,1,1,output_dim])#, initializer=scale_init)
+            b = self.get_bias(shape=[output_dim])#, initializer=-m_init*scale_init)
+            shape = [filter_h, filter_w, output_dim, int(net.get_shape()[-1])]
+            V = self.get_weight(name='v', shape=shape)
+            V_norm = tf.nn.l2_normalize(V, [0,1,2])
+            
+            net_shape = self.shape(net)
+            target_shape = [net_shape[0], net_shape[1]*stride_h, net_shape[2]*stride_w, output_dim]
+            print(net, target_shape, V_norm)
+            x_init = tf.nn.conv2d_transpose(net, V_norm, target_shape, [1, stride_h, stride_w, 1], padding="SAME")
+            x_init = tf.nn.bias_add(x_init, b)
+            m_init, v_init = tf.nn.moments(x_init, [0,1,2])
+            scale_init = 1.0/tf.sqrt(v_init + 1e-8)
+            x_init = tf.reshape(scale_init,[1,1,1,output_dim])*(x_init-tf.reshape(m_init,[1,1,1,output_dim]))
+            return g*x_init
+
+
     def conv2d(self, net, filter_w, filter_h, stride_w, stride_h, output_dim):
         self.assert_tensor(net)
+
+        if self.config.layer_regularizer == 'cosine_norm':
+            return self.cosine_conv2d(net, filter_w, filter_h, stride_w, stride_h, output_dim)
+        if self.config.layer_regularizer == 'weight_norm3':
+            return self.weightnorm3_conv2d(net, filter_w, filter_h, stride_w, stride_h, output_dim)
+        if self.config.layer_regularizer == 'weight_norm2':
+            return self.weightnorm2_conv2d(net, filter_w, filter_h, stride_w, stride_h, output_dim)
+        if self.config.layer_regularizer == 'weight_norm':
+            return self.weightnorm_conv2d(net, filter_w, filter_h, stride_w, stride_h, output_dim)
+
         with tf.variable_scope(self.generate_name(), reuse=self._reuse):
             w = self.get_weight([filter_h, filter_w, net.get_shape()[-1], output_dim])
             conv = tf.nn.conv2d(net, w, strides=[1, stride_h, stride_w, 1], padding='SAME')
@@ -133,7 +255,26 @@ class TensorflowOps:
 
             return deconv
 
+    def cosine_linear(self, net, output_dim):
+        with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+            w = self.get_weight([self.shape(net)[1], output_dim], name='cos_w')
+            b = self.get_bias([output_dim], constant=0.001)
+            w_norm = tf.sqrt(tf.reduce_sum(w**2, axis=0, keep_dims=True) + b ** 2)+0.000001
+            x_norm = tf.sqrt(tf.reduce_sum(net**2, axis=1, keep_dims=True) + 0.000001)
+            return (tf.matmul(net, w) + 0.001 * b) / w_norm / x_norm
+
+    def weight_norm_linear(self, net, output_dim):
+        with tf.variable_scope(self.generate_name(), reuse=self._reuse):
+            g = self.get_weight([1, output_dim], name='weightnorm_g')
+            v = self.get_weight([self.shape(net)[1], output_dim], name='weighnorm_v')
+            v_norm = tf.nn.l2_normalize(v, [0])
+            return (tf.matmul(net, v_norm) * g)
+
     def linear(self, net, output_dim):
+        if self.config.linear_type == 'cosine':
+            return self.cosine_linear(net, output_dim)
+        if self.config.linear_type == 'weight_norm':
+            return self.weight_norm_linear(net, output_dim)
         self.assert_tensor(net)
         initializer = self.initializer()
         shape = self.shape(net)
