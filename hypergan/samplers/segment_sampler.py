@@ -28,7 +28,7 @@ class SegmentSampler(BaseSampler):
         gens = sess.run([gan.inputs.x, g_t, mask_t, g1x_t, g2x_t, gan.generator.g1.sample, gan.generator.g2.sample], {x_t: self.x_v})
         stacks = []
         bs = gan.batch_size() // 2
-        width = 8
+        width = min(gan.batch_size(), 8)
         for gen in gens:
             for i in range(1):
                 stacks.append([gen[i*width+j] for j in range(width)])
