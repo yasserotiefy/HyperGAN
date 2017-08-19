@@ -43,6 +43,16 @@ class BaseLoss(GANComponent):
             d_loss += d_loss2
             #does this double the signal of d_real?
 
+        elif split == 5:
+            d_real, d_fake, d_fake2, d_fake3, d_fake4 = self.split_batch(net, split)
+            d_loss, g_loss = self._create(d_real, d_fake)
+            d_loss2, g_loss2 = self.reuse(d_real, d_fake2)
+            d_loss3, g_loss3 = self.reuse(d_real, d_fake3)
+            d_loss4, g_loss4 = self.reuse(d_real, d_fake4)
+            d_loss = tf.add_n([d_loss, d_loss2, d_loss3, d_loss4])
+            g_loss = tf.add_n([g_loss, g_loss2, g_loss3, g_loss4])
+            #does this double the signal of d_real?
+
 
         if d_loss is not None:
             d_loss = ops.squash(d_loss, tf.reduce_mean) #linear doesn't work with this, so we cant pass config.reduce

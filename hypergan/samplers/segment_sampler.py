@@ -38,6 +38,8 @@ class SegmentSampler(BaseSampler):
                     x_t: self.x_v
                 })
 
+        print("gens", [np.shape(g) for g in gens])
+
         stacks = []
         bs = gan.batch_size() // 2
         width = min(gan.batch_size(), 8)

@@ -21,6 +21,7 @@ class DebugSampler(BaseSampler):
 
     def _sample(self):
         samples = [sampler._sample()['generator'] for sampler in self.samplers]
+        print('----', [np.shape(sample) for sample in samples])
         all_samples = np.vstack(samples)
         print("ALL_SAMPLES:", np.shape(all_samples))
 
