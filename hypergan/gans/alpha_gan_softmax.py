@@ -103,11 +103,18 @@ class AlphaGANSoftmax(BaseGAN):
             encoder_loss = self.create_component(eloss, discriminator = encoder_discriminator)
             encoder_loss.create()
 
-            stacked_xg = ops.concat([x, x_hat, g, self.generator.g1x, self.generator.g2x], axis=0)
-            standard_discriminator.create(stacked_xg)
+            if config.stacked:
+                stacked_xg = ops.concat([x, x_hat, g], axis=0)
+                standard_discriminator.create(stacked_xg)
 
-            standard_loss = self.create_component(config.loss, discriminator = standard_discriminator)
-            standard_loss.create(split=5)
+                standard_loss = self.create_component(config.loss, discriminator = standard_discriminator)
+                standard_loss.create(split=3)
+            else:
+                stacked_xg = ops.concat([x, x_hat, g, self.generator.g1x, self.generator.g2x], axis=0)
+                standard_discriminator.create(stacked_xg)
+
+                standard_loss = self.create_component(config.loss, discriminator = standard_discriminator)
+                standard_loss.create(split=5)
 
             self.trainer = self.create_component(config.trainer)
 
@@ -128,16 +135,23 @@ class AlphaGANSoftmax(BaseGAN):
             var_lists.append(self.generator.variables())
             var_lists.append(standard_discriminator.variables())
             var_lists.append(encoder_discriminator.variables())
+            if config.skip_encoder_loss:
+                var_lists = [self.generator.variables() + encoder.variables(), standard_discriminator.variables()]
 
             metrics = []
             metrics.append(encoder_loss.metrics)
             metrics.append(standard_loss.metrics)
             metrics.append(None)
             metrics.append(None)
+            if config.skip_encoder_loss:
+                metrics = [standard_loss.metrics, None]
 
             # trainer
 
-            self.trainer = MultiStepTrainer(self, self.config.trainer, [loss1,loss2,loss3,loss4], var_lists=var_lists, metrics=metrics)
+            losses = [loss1,loss2,loss3,loss4]
+            if config.skip_encoder_loss:
+                losses = [loss2, loss3]
+            self.trainer = MultiStepTrainer(self, self.config.trainer, losses, var_lists=var_lists, metrics=metrics)
             self.trainer.create()
 
             self.session.run(tf.global_variables_initializer())

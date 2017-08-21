@@ -25,7 +25,7 @@ class MultisegmentSharedGenerator(ResizeConvGenerator):
         activation = ops.lookup(config.final_activation or 'tanh')
 
         mask_config  = dict(config.mask_generator or config)
-        mask_config["channels"]=config.segments
+        mask_config["channels"]=config.segments * (config.segments_spacing or 1)
         mask_config["layer_filter"]=None
         mask_generator = ResizeConvGenerator(gan, mask_config)
         mask_generator.ops.describe("mask")
@@ -51,21 +51,31 @@ class MultisegmentSharedGenerator(ResizeConvGenerator):
         self.ops.add_weights(mask_generator.variables())
         self.ops.add_weights(g1.variables())
 
-        def get_mask(mask, i):
-            return tf.slice(mask, [0,0,0,i], [-1,-1,-1,1])
+        def get_mask(mask, i, config):
+            print('get mask', i*(config.segments_spacing or 1), mask)
+            return tf.slice(mask, [0,0,0,i*(config.segments_spacing or 1)], [-1,-1,-1,1])
 
         def get_image(image, i):
             return tf.slice(image, [0,0,0,i*3], [-1,-1,-1,3])
-        masks = [(get_mask(mask, i), get_image(g1.sample, i)) for i in range(ops.shape(mask)[3])]
+        masks = [(get_mask(mask, i, config), get_image(g1.sample, i)) for i in range(ops.shape(mask)[3]//(config.segments_spacing or 1))]
 
         full_mask = tf.ones_like(masks[0][0])
         sample = tf.zeros_like(gan.inputs.x)
-        for applied_mask in masks:
-            g = applied_mask[1]
-            m = applied_mask[0]
+        if config.stacked:
+            for applied_mask in masks:
+                g = applied_mask[1]
+                m = applied_mask[0]
 
-            sample += (1.0-full_mask)*m*g
-            full_mask = full_mask*(1.0-m)
+                sample += (1.0-m)*sample+m*g
+                full_mask = full_mask*(1.0-m)
+
+        else:
+            for applied_mask in masks:
+                g = applied_mask[1]
+                m = applied_mask[0]
+
+                sample += (1.0-full_mask)*m*g
+                full_mask = full_mask*(1.0-m)
 
         self.sample = sample
 

@@ -47,11 +47,20 @@ class ResizeConvGenerator(BaseGenerator):
             net = self.layer_filter(net)
             if config.concat_linear:
                 size = ops.shape(net)[1]*ops.shape(net)[2]*config.concat_linear_filters
-                net2 = tf.reshape(net, [ops.shape(net)[0], -1])
-                net2 = tf.slice(net2, [0,0], [ops.shape(net)[0], config.concat_linear])
-                net2 = ops.linear(net2, size)
-                net2 = tf.reshape(net2, [ops.shape(net)[0], ops.shape(net)[1], ops.shape(net)[2], config.concat_linear_filters])
-                if config.concat_linear_regularize:
+
+                if config.alternate_skip:
+                    net2 = net
+                    net2 = tf.slice(net2, [0,0,0,0], [ops.shape(net)[0], -1, -1, config.concat_linear])
+                    net2 = tf.reshape(net2, [ops.shape(net)[0], -1])
+                    net2 = ops.linear(net2, size)
+                    net2 = tf.reshape(net2, [ops.shape(net)[0], ops.shape(net)[1], ops.shape(net)[2], config.concat_linear_filters])
+                else:
+                    net2 = tf.reshape(net, [ops.shape(net)[0], -1])
+                    net2 = tf.slice(net2, [0,0], [ops.shape(net)[0], config.concat_linear])
+                    net2 = ops.linear(net2, size)
+                    net2 = tf.reshape(net2, [ops.shape(net)[0], ops.shape(net)[1], ops.shape(net)[2], config.concat_linear_filters])
+
+                if config.concat_linear_regularizer:
                     net2 = self.layer_regularizer(net2)
                 net2 = config.activation(net2)
                 net = tf.concat([net, net2], axis=3)
