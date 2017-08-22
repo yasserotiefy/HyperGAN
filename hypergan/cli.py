@@ -202,6 +202,8 @@ class CLI:
             i+=1
             start_time = time.time()
             self.step()
+            if self.args.beholder:
+              self.beholder_visualizer.update()
 
             if (self.args.save_every != None and
                 self.args.save_every != -1 and
@@ -245,6 +247,10 @@ class CLI:
         else:
             print("[discriminator] Class loss is off.  Unsupervised learning mode activated.")
 
+    def start_beholder(self):
+      if self.args.beholder:
+        self.beholder_visualizer = Beholder(session=sess, logdir=self.args.tensorboard_log_dir)
+
     def run(self):
         if self.method == 'train':
             self.gan.create()
@@ -255,6 +261,8 @@ class CLI:
                 print("Initializing new model")
             else:
                 print("Model loaded")
+
+            self.start_beholder()
             tf.train.start_queue_runners(sess=self.gan.session)
             self.train()
             tf.reset_default_graph()
