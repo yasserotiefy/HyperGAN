@@ -1,5 +1,6 @@
 import hyperchamber as hc
 import tensorflow as tf
+import numpy as np
 import types
 import uuid
 import importlib
@@ -147,6 +148,8 @@ class TensorflowOps:
             return self.linear(net, 1)
         return _build
 
+    def nsoftplus(self, net):
+        return tf.log(tf.exp(net)+1)/np.log(2) - 1.0
 
     def prelu(self):
         def _prelu(_x):
@@ -265,6 +268,10 @@ class TensorflowOps:
             return tf.nn.crelu
         if symbol == "prelu":
             return self.prelu()
+        if symbol == 'nsoftplus':
+            return self.nsoftplus
+        if symbol == "trelu":
+            return self.trelu()
         if symbol == "selu":
             return selu
         if symbol == "frelu":
