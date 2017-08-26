@@ -18,6 +18,8 @@ class DebugSampler(BaseSampler):
         #if hasattr(self.gan.generator, 'g1x'):
         self.samplers += [SegmentSampler(gan)]
 
+        if isinstance(gan.generator, SegmentGenerator):
+            self.samplers += [SegmentSampler(gan)]
 
     def _sample(self):
         samples = [sampler._sample()['generator'] for sampler in self.samplers]
