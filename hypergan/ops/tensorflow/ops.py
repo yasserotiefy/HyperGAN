@@ -303,6 +303,9 @@ class TensorflowOps:
         return _build
 
 
+    def clamped(self, net):
+        return tf.maximum(0., tf.minimum(net, 1.))
+
     def prelu(self):
         def _prelu(_x):
             orig_shape = self.shape(_x)
@@ -395,6 +398,8 @@ class TensorflowOps:
             return tf.nn.tanh
         if symbol == 'sigmoid':
             return tf.nn.sigmoid
+        if symbol == 'clamped':
+            return self.clamped
         if symbol == 'cosine_norm':
             return "cosine_norm"
         if symbol == 'batch_norm':
