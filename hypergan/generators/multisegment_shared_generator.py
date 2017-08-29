@@ -5,6 +5,7 @@ from hypergan.generators.common import *
 
 from .base_generator import BaseGenerator
 from .resize_conv_generator import ResizeConvGenerator
+from .segment_generator import SegmentGenerator
 
 def add_mask(gan, config, net):
     mask = gan.generator.mask_single_channel
@@ -12,7 +13,7 @@ def add_mask(gan, config, net):
     shape = [s[1], s[2]]
     return tf.image.resize_images(mask, shape, 1)
 
-class MultisegmentSharedGenerator(ResizeConvGenerator):
+class MultisegmentSharedGenerator(SegmentGenerator):
 
     def required(self):
         return []
@@ -37,7 +38,10 @@ class MultisegmentSharedGenerator(ResizeConvGenerator):
         #self.mask = tf.tile(mask_generator.sample, [1,1,1,3])
         #self.mask = mask_generator.sample
 
-        mask = mask_generator.sample/2.0+0.5
+        if config.mask_generator:
+            mask = mask_generator.sample
+        else:
+            mask = mask_generator.sample/2.0+0.5
 
         config['layer_filter'] = add_mask
         config['channels'] = config.segments * 3
@@ -93,7 +97,10 @@ class MultisegmentSharedGenerator(ResizeConvGenerator):
 
         self.mask_generator = mask_generator
 
-        self.mask = tf.slice(mask_generator.sample, [0,0,0,0], [-1,-1,-1,3])
+        if config.mask_generator:
+            self.mask = tf.slice(mask_generator.sample, [0,0,0,0], [-1,-1,-1,3])*2-1
+        else:
+            self.mask = tf.slice(mask_generator.sample, [0,0,0,0], [-1,-1,-1,3])
         #self.sample = self.g1x
         self.masks = masks
 
