@@ -49,7 +49,7 @@ class CLI:
         if self.args.save_file:
             self.save_file = self.args.save_file
         else:
-            default_save_path = os.path.abspath("/content/drive/GP/Hyper_GAN/saves/"+self.config_name)
+            default_save_path = os.path.abspath("/content/HyperGAN/drive/GP/Hyper_GAN/saves/"+self.config_name)
             self.save_file = default_save_path + "/model.ckpt"
             self.create_path(self.save_file)
 
@@ -97,7 +97,7 @@ class CLI:
         self.gan.step()
 
         if(self.steps % self.sample_every == 0):
-            sample_file="/content/drive/GP/Hyper_GAN/samples/%06d.png" % (self.samples)
+            sample_file="/content/HyperGAN/drive/GP/Hyper_GAN/samples/%06d.png" % (self.samples)
             self.create_path(sample_file)
             sample_list = self.sample(sample_file)
             if self.args.use_hc_io:
@@ -124,7 +124,7 @@ class CLI:
 
     def sample_forever(self):
         while True:
-            sample_file="/content/drive/GP/Hyper_GAN/samples/%06d.png" % (self.samples)
+            sample_file="/content/HyperGAN/drive/GP/Hyper_GAN/samples/%06d.png" % (self.samples)
             self.create_path(sample_file)
             self.sample(sample_file)
             self.samples += 1
