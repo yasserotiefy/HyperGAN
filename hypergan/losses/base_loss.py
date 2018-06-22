@@ -16,10 +16,10 @@ class BaseLoss(GANComponent):
         config = self.config
         ops = self.gan.ops
         
-        if self.discriminator is None:
-            net = gan.discriminator.sample
-        else:
-            net = self.discriminator.sample
+#         if self.discriminator is None:
+#             net = gan.discriminator.sample
+#         else:
+        net = self.discriminator.sample
 
         if split == 2:
             d_real, d_fake = self.split_batch(net, split)
