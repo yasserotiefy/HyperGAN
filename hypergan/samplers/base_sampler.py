@@ -16,7 +16,7 @@ class BaseSampler:
         with gan.session.as_default():
 
             sample = self._sample()
-
+            print("Heeeeeeeeeeeeeee")
             data = sample['generator']
 
             width = min(gan.batch_size(), self.samples_per_row)
