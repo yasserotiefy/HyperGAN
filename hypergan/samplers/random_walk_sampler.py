@@ -19,8 +19,11 @@ class RandomWalkSampler(BaseSampler):
 
         if self.z is None:
             self.z = gan.encoder.sample.eval()
+            print("heeee1")
             self.target = gan.encoder.sample.eval()
+            print("heeee2")
             self.input = gan.session.run(gan.inputs.x)
+            print("heeee3")
 
         if self.step > self.steps:
             self.z = self.target
