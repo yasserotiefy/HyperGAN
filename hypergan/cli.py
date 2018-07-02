@@ -123,7 +123,7 @@ class CLI:
         return gan_server(self.gan.session, config)
 
     def sample_forever(self):
-        while True:
+        while self.samples < 1:
             sample_file="/content/drive/GP/Hyper_GAN/samples/%06d.png" % (self.samples)
             self.create_path(sample_file)
             self.sample(sample_file)
