@@ -14,7 +14,7 @@ class BaseSampler:
         gan = self.gan
 
         with gan.session.as_default():
-
+            print("Heeeeeeeeeeeeeee")
             sample = self._sample()
             print("Heeeeeeeeeeeeeee")
             data = sample['generator']
